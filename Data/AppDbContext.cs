@@ -8,7 +8,7 @@ namespace IzinSistemi_Back.Data
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
         }
-        public DbSet<Personel> Personels { get; set; }
+        public DbSet<Employee> Employees { get; set; }
         public DbSet<Leave> Leaves
         {
             get; set;
