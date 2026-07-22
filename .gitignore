@@ -2,3 +2,7 @@
 .vs/
 bin/
 obj/
+izinsistemi.db-shm
+izinsistemi.db
+izinsistemi.db-wal
+izinsistemi.db

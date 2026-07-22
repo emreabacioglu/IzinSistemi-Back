@@ -3,6 +3,7 @@ using System;
 using IzinSistemi_Back.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,14 +11,48 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace IzinSistemi_Back.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260722090110_UpdatePersonelModel")]
+    partial class UpdatePersonelModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.10");
 
-            modelBuilder.Entity("IzinSistemi_Back.Models.Employee", b =>
+            modelBuilder.Entity("IzinSistemi_Back.Models.Leave", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LeaveType")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PersonelId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("RequestDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PersonelId");
+
+                    b.ToTable("Leaves");
+                });
+
+            modelBuilder.Entity("IzinSistemi_Back.Models.Personel", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -61,53 +96,21 @@ namespace IzinSistemi_Back.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Employees");
+                    b.ToTable("Personels");
                 });
 
             modelBuilder.Entity("IzinSistemi_Back.Models.Leave", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("EmployeeId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("EndDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("LeaveType")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("RequestDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EmployeeId");
-
-                    b.ToTable("Leaves");
-                });
-
-            modelBuilder.Entity("IzinSistemi_Back.Models.Leave", b =>
-                {
-                    b.HasOne("IzinSistemi_Back.Models.Employee", "Employee")
+                    b.HasOne("IzinSistemi_Back.Models.Personel", "Personel")
                         .WithMany("Leaves")
-                        .HasForeignKey("EmployeeId")
+                        .HasForeignKey("PersonelId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Employee");
+                    b.Navigation("Personel");
                 });
 
-            modelBuilder.Entity("IzinSistemi_Back.Models.Employee", b =>
+            modelBuilder.Entity("IzinSistemi_Back.Models.Personel", b =>
                 {
                     b.Navigation("Leaves");
                 });
