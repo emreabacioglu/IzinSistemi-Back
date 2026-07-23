@@ -42,9 +42,41 @@ namespace IzinSistemi_Back.Controllers
             {
                 return BadRequest("Gönderilen izin verisi boş olamaz.");
             }
-            _context.Leaves.Add(leave);
+            var existingLeave = await _context.Leaves.FirstOrDefaultAsync(l => l.EmployeeId == leave.EmployeeId && l.StartDate <= leave.EndDate && l.EndDate >= leave.StartDate);
+            if (existingLeave != null)
+            {
+                existingLeave.Status = leave.Status;
+            }
+            else
+            {
+                var newLeave = new Leave
+                {
+                    EmployeeId = leave.EmployeeId,
+                    StartDate = leave.StartDate,
+                    EndDate = leave.EndDate,
+                    RequestDate = leave.RequestDate,
+                    Status = leave.Status
+                };
+                _context.Leaves.Add(newLeave);
+            }
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetLeave), new { id = leave.Id }, leave);
+            return Ok(new { message = "İzin başarıyla kaydedildi." });
+        }
+
+        [HttpGet("employee/{employeeId}")]
+        public async Task<IActionResult> GetLeavesByEmployeeId(int employeeId)
+        {
+            var leaves = await _context.Leaves.Where(l => l.EmployeeId == employeeId).ToListAsync();
+            return Ok(leaves);
+        }
+
+        public class LeaveRequestDto
+        {
+            public int EmployeeId { get; set; }
+            public DateTime StartDate { get; set; }
+            public DateTime EndDate { get; set; }
+            public DateTime RequestDate { get; set; }
+            public string Status { get; set; }
         }
     }
 }
