@@ -5,3 +5,4 @@ obj/
 izinsistemi.db-shm
 izinsistemi.db-wal
 izinsistemi.db
+*.db

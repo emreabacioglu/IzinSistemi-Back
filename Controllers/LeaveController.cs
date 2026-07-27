@@ -70,6 +70,20 @@ namespace IzinSistemi_Back.Controllers
             return Ok(leaves);
         }
 
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteLeave(int id)
+        {
+            var leave = await _context.Leaves.FindAsync(id);
+            if (leave == null)
+            {
+                return NotFound("Silinecek izin bulunamadı.");
+            }
+            _context.Leaves.Remove(leave);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "İzin başarıyla iptal edildi." });
+        }
+
         public class LeaveRequestDto
         {
             public int EmployeeId { get; set; }
