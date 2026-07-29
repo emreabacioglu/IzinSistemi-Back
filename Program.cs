@@ -1,4 +1,5 @@
 using IzinSistemi_Back.Data;
+using IzinSistemi_Back.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,6 +22,10 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod();
     });
 });
+
+builder.Services.AddScoped<IEmailService, EmailService>();
+
+builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 
