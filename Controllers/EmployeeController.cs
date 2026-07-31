@@ -20,7 +20,26 @@ namespace IzinSistemi_Back.Controllers
         [HttpGet]
         public async Task<IActionResult> GetEmployees()
         {
-            var employees = await _context.Employees.ToListAsync();
+            var employees = await _context.Employees
+                .Include(e => e.Leaves)
+                .Select(e => new
+                {
+                    e.Id,
+                    e.Name,
+                    e.Surname,
+                    FullName = e.Name + " " + e.Surname,
+                    e.Department,
+                    e.Title,
+
+                    Leaves = e.Leaves.Select(l => new
+                    {
+                        l.Id,
+                        l.StartDate,
+                        l.Status
+                    }).ToList()
+                })
+                .ToListAsync();
+
             return Ok(employees);
         }
 
@@ -58,6 +77,40 @@ namespace IzinSistemi_Back.Controllers
                 return Unauthorized("Geçersiz e-posta veya şifre.");
             }
             return Ok(employee);
+        }
+
+
+        //sil geçici çalışanlar
+        [HttpPost("seed")]
+        public async Task<IActionResult> SeedMockData()
+        {
+            // Eğer daha önce eklendiyse, mükerrer kayıt olmasın diye kontrol edelim
+            if (_context.Employees.Any(e => e.Email.StartsWith("mock")))
+            {
+                return BadRequest("Test verileri zaten veritabanında mevcut.");
+            }
+
+            var mockUsers = new List<Employee>
+            {
+                new Employee { Name = "Ahmet", Surname = "Yılmaz", Email = "mock1@test.com", Password = "123", Department = "Temel Bankacılık", Title = "Yönetici" },
+                new Employee { Name = "Ayşe", Surname = "Kaya", Email = "mock2@test.com", Password = "123", Department = "Temel Bankacılık", Title = "Yazılımcı" },
+                new Employee { Name = "Mehmet", Surname = "Demir", Email = "mock3@test.com", Password = "123", Department = "Temel Bankacılık", Title = "Analist" },
+
+                new Employee { Name = "Fatma", Surname = "Çelik", Email = "mock4@test.com", Password = "123", Department = "Nakit Yönetimi", Title = "Yönetici" },
+                new Employee { Name = "Burak", Surname = "Şahin", Email = "mock5@test.com", Password = "123", Department = "Nakit Yönetimi", Title = "Yazılımcı" },
+                new Employee { Name = "Ceren", Surname = "Güneş", Email = "mock6@test.com", Password = "123", Department = "Nakit Yönetimi", Title = "Analist" },
+                new Employee { Name = "Ali", Surname = "Koç", Email = "mock7@test.com", Password = "123", Department = "Nakit Yönetimi", Title = "Yazılımcı" },
+
+                new Employee { Name = "Emre", Surname = "Doğan", Email = "mock8@test.com", Password = "123", Department = "Çek Senet", Title = "Yönetici" },
+                new Employee { Name = "Zeynep", Surname = "Öztürk", Email = "mock9@test.com", Password = "123", Department = "Çek Senet", Title = "Analist" },
+                new Employee { Name = "Deniz", Surname = "Arslan", Email = "mock10@test.com", Password = "123", Department = "Çek Senet", Title = "Yazılımcı" }
+            };
+
+            // Eğer veritabanındaki Employee tablonun adı farklıysa (örn: _context.Users), yukarıdaki ve aşağıdaki Employees kısmını ona göre değiştir.
+            _context.Employees.AddRange(mockUsers);
+            await _context.SaveChangesAsync();
+
+            return Ok("10 adet test kullanıcısı başarıyla eklendi! 🎉");
         }
     }
 
