@@ -109,11 +109,19 @@ namespace IzinSistemi_Back.Controllers
             var employee = await _context.Employees.FindAsync(id);
             if (employee == null)
             {
-                return NotFound("KUllanıcı bulunamadı");
+                return NotFound("Kullanıcı bulunamadı");
             }
 
             employee.Department = dto.Department;
             employee.Title = dto.Title;
+            
+            if (dto.TotalLeaveDays.HasValue)
+            {
+                employee.TotalLeaveDays = dto.TotalLeaveDays.Value;
+            }
+
+            employee.BirthDay = dto.Birthday;
+            employee.LeaveReset = dto.LeaveReset;
 
             await _context.SaveChangesAsync();
 
@@ -145,5 +153,8 @@ namespace IzinSistemi_Back.Controllers
     {
         public string Department { get; set; }
         public string Title { get; set; }
+        public int? TotalLeaveDays { get; set; }
+        public DateTime? Birthday { get; set; }
+        public DateTime? LeaveReset { get; set; }
     }
 }

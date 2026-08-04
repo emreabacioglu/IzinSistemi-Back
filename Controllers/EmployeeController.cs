@@ -80,6 +80,22 @@ namespace IzinSistemi_Back.Controllers
         }
 
 
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteEmployee(int id)
+        {
+            var employee = await _context.Employees.FindAsync(id);
+            if (employee == null)
+            {
+                return NotFound(new { message = "Böyle bir çalışan bulunamadı." });
+            }
+
+            _context.Employees.Remove(employee);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Çalışan başarıyla silindi." });
+        }
+
+        /*
         //sil geçici çalışanlar
         [HttpPost("seed")]
         public async Task<IActionResult> SeedMockData()
@@ -112,6 +128,7 @@ namespace IzinSistemi_Back.Controllers
 
             return Ok("10 adet test kullanıcısı başarıyla eklendi! 🎉");
         }
+        */
     }
 
     public class LoginRequest
