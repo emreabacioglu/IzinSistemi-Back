@@ -1,5 +1,7 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Net.Mail;
+using System.Threading.Tasks;
 
 namespace IzinSistemi_Back.Services
 {
@@ -9,25 +11,39 @@ namespace IzinSistemi_Back.Services
         {
             var mail = "ZT.emre.72@gmail.com";
 
-            // Şifreyi önce Render/Sunucu ortam değişkeninden oku, yoksa (local test için) yedek değeri kullan
+            // Render Environment'tan oku
             var pw = Environment.GetEnvironmentVariable("GMAIL_APP_PASSWORD");
+
             if (string.IsNullOrEmpty(pw))
             {
-                throw new InvalidOperationException("GMAIL_APP_PASSWORD environment variable is not set.");
+                Console.WriteLine("❌ HATA: GMAIL_APP_PASSWORD ortam değişkeni boş veya bulunamadı!");
+                throw new InvalidOperationException("GMAIL_APP_PASSWORD bulunamadı.");
             }
 
-            using (var client = new SmtpClient("smtp.gmail.com", 587))
+            try
             {
-                client.EnableSsl = true;
-                client.UseDefaultCredentials = false;
-                client.Credentials = new NetworkCredential(mail, pw.Replace(" ", ""));
-
-                using (var mailMessage = new MailMessage(from: mail, to: toEmail, subject, body))
+                using (var client = new SmtpClient("smtp.gmail.com", 587))
                 {
-                    mailMessage.IsBodyHtml = true;
-                    await client.SendMailAsync(mailMessage);
+                    client.EnableSsl = true;
+                    client.UseDefaultCredentials = false;
+                    client.Credentials = new NetworkCredential(mail, pw.Trim());
 
+                    using (var mailMessage = new MailMessage(from: mail, to: toEmail, subject, body))
+                    {
+                        mailMessage.IsBodyHtml = true;
+                        await client.SendMailAsync(mailMessage);
+                        Console.WriteLine($"✅ MAİL BAŞARIYLA GÖNDERİLDİ: {toEmail}");
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ SMTP MAİL GÖNDERME HATASI: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"❌ DETAY: {ex.InnerException.Message}");
+                }
+                throw; // Hatanın yukarı fırlatılıp görülmesini sağla
             }
         }
     }
