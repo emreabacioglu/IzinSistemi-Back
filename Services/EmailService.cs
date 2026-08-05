@@ -10,20 +10,25 @@ namespace IzinSistemi_Back.Services
             var mail = "ZT.emre.72@gmail.com";
 
             // Şifreyi önce Render/Sunucu ortam değişkeninden oku, yoksa (local test için) yedek değeri kullan
-            var pw = Environment.GetEnvironmentVariable("GMAIL_APP_PASSWORD") ?? "agna vzuh vtbm vclf";
-
-            var client = new SmtpClient("smtp.gmail.com", 587)
+            var pw = Environment.GetEnvironmentVariable("GMAIL_APP_PASSWORD");
+            if (string.IsNullOrEmpty(pw))
             {
-                EnableSsl = true,
-                Credentials = new NetworkCredential(mail, pw)
-            };
+                throw new InvalidOperationException("GMAIL_APP_PASSWORD environment variable is not set.");
+            }
 
-            var mailMessage = new MailMessage(from: mail, to: toEmail, subject, body)
+            using (var client = new SmtpClient("smtp.gmail.com", 587))
             {
-                IsBodyHtml = true
-            };
+                client.EnableSsl = true;
+                client.UseDefaultCredentials = false;
+                client.Credentials = new NetworkCredential(mail, pw.Replace(" ", ""));
 
-            await client.SendMailAsync(mailMessage);
+                using (var mailMessage = new MailMessage(from: mail, to: toEmail, subject, body))
+                {
+                    mailMessage.IsBodyHtml = true;
+                    await client.SendMailAsync(mailMessage);
+
+                }
+            }
         }
     }
 }
