@@ -144,31 +144,38 @@ namespace IzinSistemi_Back.Controllers
         [HttpPost("ForgotPassword")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
         {
-            var user = await _context.Employees.FirstOrDefaultAsync(e => e.Email == dto.Email);
-            if (user == null)
+            try
             {
+                var user = await _context.Employees.FirstOrDefaultAsync(e => e.Email == dto.Email);
+                if (user == null)
+                {
+                    return Ok(new { message = "Eğer sistemde kayıtlı bir e-posta adresi girdiyseniz, şifre sıfırlama kodu gönderilmiştir." });
+                }
+
+                Random rnd = new Random();
+                string otpCode = rnd.Next(100000, 999999).ToString();
+
+                _cache.Set($"Reset_{dto.Email}", otpCode, TimeSpan.FromMinutes(10));
+
+                string subject = "Şifre Sıfırlama Kodunuz";
+                string body = $@"
+            <div style='font-family: Arial, sans-serif; text-align: center; padding: 20px;'>
+                <h2>Şifre Sıfırlama Talebi</h2>
+                <p>Hesabınızın şifresini sıfırlamak için aşağıdaki kodu kullanın (10 dakika geçerlidir):</p>
+                <h1 style='color: #E10514; background: #f8f9fa; padding: 15px; border-radius: 8px; display: inline-block;'>
+                    {otpCode}
+                </h1>
+                <p style='font-size: 11px; color: #6c757d;'>Bu işlemi siz talep etmediyseniz, lütfen bu e-postayı dikkate almayın.</p>
+            </div>";
+
+                await _emailService.SendEmailAsync(dto.Email, subject, body);
+
                 return Ok(new { message = "Eğer sistemde kayıtlı bir e-posta adresi girdiyseniz, şifre sıfırlama kodu gönderilmiştir." });
             }
-
-            Random rnd = new Random();
-            string otpCode = rnd.Next(100000, 999999).ToString();
-
-            _cache.Set($"Reset_{dto.Email}", otpCode, TimeSpan.FromMinutes(10));
-
-            string subject = "Şifre Sıfırlama Kodunuz";
-            string body = $@"
-                <div style='font-family: Arial, sans-serif; text-align: center; padding: 20px;'>
-                    <h2>Şifre Sıfırlama Talebi</h2>
-                    <p>Hesabınızın şifresini sıfırlamak için aşağıdaki kodu kullanın (10 dakika geçerlidir):</p>
-                    <h1 style='color: #E10514; background: #f8f9fa; padding: 15px; border-radius: 8px; display: inline-block;'>
-                        {otpCode}
-                    </h1>
-                    <p style='font-size: 11px; color: #6c757d;'>Bu işlemi siz talep etmediyseniz, lütfen bu e-postayı dikkate almayın.</p>
-                </div>";
-
-            await _emailService.SendEmailAsync(dto.Email, subject, body);
-
-            return Ok(new { message = "Eğer sistemde kayıtlı bir e-posta adresi girdiyseniz, şifre sıfırlama kodu gönderilmiştir." });
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Mail gönderilirken bir hata oluştu: " + ex.Message });
+            }
         }
 
         [HttpPost("ResetPassword")]

@@ -7,11 +7,11 @@ var builder = WebApplication.CreateBuilder(args);
 // --- 1. CORS SERVİSİ (Hem Local hem de Vercel/Canlı Ortam İçin Tüm İsteklere İzin Verir) ---
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("AllowAll", builder =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
     });
 });
 
@@ -38,5 +38,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseAuthorization();
 app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    // Veritabanı ve tablolar yoksa otomatik oluşturur/günceller
+    dbContext.Database.Migrate();
+}
 
 app.Run();
