@@ -4,42 +4,39 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-// Add services to the container.
-
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-
+// --- 1. CORS SERVİSİ (Hem Local hem de Vercel/Canlı Ortam İçin Tüm İsteklere İzin Verir) ---
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowReact", policy =>
+    options.AddPolicy("AllowAll", policy =>
     {
-        policy.WithOrigins("http://localhost:5173") // React app URL
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
     });
 });
 
-builder.Services.AddScoped<IEmailService, EmailService>();
+// --- 2. VERİTABANI & DİĞER SERVİSLER ---
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddControllers();
+builder.Services.AddOpenApi();
+
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// --- 3. PIPELINE & CORS KULLANIMI ---
+// UYARI: app.UseCors her zaman Routing ve Authorization'dan ÖNCE çağrılmalıdır!
+app.UseCors("AllowAll");
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
-app.UseCors("AllowReact");
-
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
