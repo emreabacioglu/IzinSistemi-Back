@@ -7,3 +7,4 @@ izinsistemi.db-wal
 izinsistemi.db
 *.db
 *.user
+Properties/launchSettings.json
