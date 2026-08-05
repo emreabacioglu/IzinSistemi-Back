@@ -71,10 +71,11 @@ namespace IzinSistemi_Back.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var employee = await _context.Employees.FirstOrDefaultAsync(e => e.Email == request.Email && e.Password == request.Password);
-            if (employee == null)
+            var employee = await _context.Employees.FirstOrDefaultAsync(e => e.Email == request.Email);
+
+            if (employee == null || !BCrypt.Net.BCrypt.Verify(request.Password, employee.Password))
             {
-                return Unauthorized("Geçersiz e-posta veya şifre.");
+                return Unauthorized(new {message = "Geçersiz e-posta veya şifre."});
             }
             return Ok(employee);
         }

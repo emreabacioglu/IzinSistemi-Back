@@ -10,6 +10,7 @@
         public string Password { get; set; }
         public string Department { get; set; }
         public string Title { get; set; }
+        public bool IsAdmin { get; set; } = false;
 
         public int? TotalLeaveDays { get; set; }
         public int? RemainingLeaveDays { get; set; }

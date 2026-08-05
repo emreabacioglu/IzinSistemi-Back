@@ -4,6 +4,8 @@ using IzinSistemi_Back.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
 
 namespace IzinSistemi_Back.Controllers
 {
@@ -25,37 +27,33 @@ namespace IzinSistemi_Back.Controllers
         [HttpPost("Register")]
         public async Task<IActionResult> Register(RegisterDto dto)
         {
-            // --- 1. SPAM VE CEZA KONTROLÜ (RATE LIMITING) ---
+            var existingUser = await _context.Employees.FirstOrDefaultAsync(e => e.Email == dto.Email);
+            if (existingUser != null)
+            {
+                return BadRequest(new { message = "Bu e-posta adresi ile zaten bir kayıt mevcut. Lütfen giriş yapın." });
+            }
+
             string spamKey = $"SpamCheck_{dto.Email}";
 
             if (_cache.TryGetValue(spamKey, out int requestCount))
             {
-                // Toplam 3 hakki doldurduysa (1 ilk istek + 2 tekrar) banla!
                 if (requestCount >= 3)
                 {
                     return BadRequest("Maksimum kod isteme sınırına ulaştınız. Lütfen 10 dakika bekleyin.");
                 }
-
-                // Sınırı aşmadıysa (2. veya 3. istekse) sayacı 1 artır ve süresini 10 dakika yap
                 _cache.Set(spamKey, requestCount + 1, TimeSpan.FromMinutes(10));
             }
             else
             {
-                // 1. İstek (Kullanıcı ilk defa butona basıyor), sayacı 1 yap
                 _cache.Set(spamKey, 1, TimeSpan.FromMinutes(10));
             }
 
-
-            // --- 2. YENİ KOD ÜRET VE ESKİSİNİ EZ ---
             Random rnd = new Random();
             string otpCode = rnd.Next(100000, 999999).ToString();
 
-            // Kodun geçerlilik ömrü (Ekrana girme süresi) hala 5 dakika
             var cacheData = new UserRegistrationCacheData { UserInfo = dto, OtpCode = otpCode };
             _cache.Set(dto.Email, cacheData, TimeSpan.FromMinutes(5));
 
-
-            // --- 3. MAİL GÖNDERİMİ ---
             string subject = "Kurumsal İzin Sistemi - Doğrulama Kodunuz";
             string body = $@"
         <div style='font-family: Arial, sans-serif; text-align: center; padding: 20px;'>
@@ -86,7 +84,7 @@ namespace IzinSistemi_Back.Controllers
                         Name = savedData.UserInfo.Name,
                         Surname = savedData.UserInfo.Surname,
                         Email = savedData.UserInfo.Email,
-                        Password = savedData.UserInfo.Password,
+                        Password = BCrypt.Net.BCrypt.HashPassword(savedData.UserInfo.Password),
                         Department = "Belirtilmedi",
                         Title = "Belirtilmedi"
                     };
@@ -127,6 +125,71 @@ namespace IzinSistemi_Back.Controllers
 
             return Ok(new { message = "Profil başarıyla güncellendi." });
         }
+
+        [HttpPost("toggle-admin/{id}")]
+        public async Task<IActionResult> ToggleAdminStatus(int id, [FromBody] ToggleAdminDto request)
+        {
+            var user = await _context.Employees.FindAsync(id);
+            if (user == null)
+            {
+                return NotFound(new { message = "Kullanıcı bulunamadı" });
+            }
+
+            user.IsAdmin = request.IsAdmin;
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Kullanıcı yetkisi başarıyla güncellendi.", isAdmin = user.IsAdmin });
+        }
+
+        [HttpPost("ForgotPassword")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+        {
+            var user = await _context.Employees.FirstOrDefaultAsync(e => e.Email == dto.Email);
+            if (user == null)
+            {
+                return Ok(new { message = "Eğer sistemde kayıtlı bir e-posta adresi girdiyseniz, şifre sıfırlama kodu gönderilmiştir." });
+            }
+
+            Random rnd = new Random();
+            string otpCode = rnd.Next(100000, 999999).ToString();
+
+            _cache.Set($"Reset_{dto.Email}", otpCode, TimeSpan.FromMinutes(10));
+
+            string subject = "Şifre Sıfırlama Kodunuz";
+            string body = $@"
+                <div style='font-family: Arial, sans-serif; text-align: center; padding: 20px;'>
+                    <h2>Şifre Sıfırlama Talebi</h2>
+                    <p>Hesabınızın şifresini sıfırlamak için aşağıdaki kodu kullanın (10 dakika geçerlidir):</p>
+                    <h1 style='color: #E10514; background: #f8f9fa; padding: 15px; border-radius: 8px; display: inline-block;'>
+                        {otpCode}
+                    </h1>
+                    <p style='font-size: 11px; color: #6c757d;'>Bu işlemi siz talep etmediyseniz, lütfen bu e-postayı dikkate almayın.</p>
+                </div>";
+
+            await _emailService.SendEmailAsync(dto.Email, subject, body);
+
+            return Ok(new { message = "Eğer sistemde kayıtlı bir e-posta adresi girdiyseniz, şifre sıfırlama kodu gönderilmiştir." });
+        }
+
+        [HttpPost("ResetPassword")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+        {
+            
+            if (_cache.TryGetValue($"Reset_{dto.Email}", out string savedCode) && savedCode == dto.OtpCode)
+            {
+                var user = await _context.Employees.FirstOrDefaultAsync(e => e.Email == dto.Email);
+                if (user == null) return BadRequest("Kullanıcı bulunamadı.");
+                
+                user.Password = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+                await _context.SaveChangesAsync();
+
+                _cache.Remove($"Reset_{dto.Email}");
+
+                return Ok(new { message = "Şifreniz başarıyla değiştirildi. Yeni şifrenizle giriş yapabilirsiniz." });
+            }
+
+            return BadRequest(new { message = "Hatalı veya süresi dolmuş kod girdiniz." });
+        }
     }
 
         public class RegisterDto
@@ -134,6 +197,9 @@ namespace IzinSistemi_Back.Controllers
         public string Name { get; set; }
         public string Surname { get; set; }
         public string Email { get; set; }
+        [Required(ErrorMessage = "Şifre alanı zorunludur.")]
+        [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$",
+            ErrorMessage = "Şifreniz en az 8 karakter uzunluğunda olmalı; en az 1 büyük harf, 1 küçük harf, 1 sayı ve 1 özel karakter (!@#$%^&*) içermelidir.")]
         public string Password { get; set; }
     }
 
@@ -156,5 +222,26 @@ namespace IzinSistemi_Back.Controllers
         public int? TotalLeaveDays { get; set; }
         public DateTime? Birthday { get; set; }
         public DateTime? LeaveReset { get; set; }
+    }
+
+    public class ToggleAdminDto
+    {
+        public bool IsAdmin { get; set; }
+    }
+
+    public class ForgotPasswordDto
+    {
+        public string Email { get; set; }
+    }
+
+    public class ResetPasswordDto
+    {
+        public string Email { get; set; }
+        public string OtpCode { get; set; }
+
+        [Required(ErrorMessage = "Şifre alanı zorunludur.")]
+        [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$",
+            ErrorMessage = "Şifreniz en az 8 karakter uzunluğunda olmalı; en az 1 büyük harf, 1 küçük harf, 1 sayı ve 1 özel karakter (!@#$%^&*) içermelidir.")]
+        public string NewPassword { get; set; }
     }
 }

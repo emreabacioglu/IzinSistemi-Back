@@ -84,6 +84,23 @@ namespace IzinSistemi_Back.Controllers
             return Ok(new { message = "İzin başarıyla iptal edildi." });
         }
 
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateLeave(int id, [FromBody] Leave updatedLeave)
+        {
+            var existingLeave = await _context.Leaves.FindAsync(id);
+
+            if(existingLeave == null)
+            {
+                return NotFound(new { message = "İzin kaydı bulunamadı." });
+            }
+
+            existingLeave.Status = updatedLeave.Status;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "İzin durumu başarıyla güncellendi." });
+        }
+
         public class LeaveRequestDto
         {
             public int EmployeeId { get; set; }
