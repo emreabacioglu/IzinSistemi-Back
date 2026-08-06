@@ -10,40 +10,28 @@ namespace IzinSistemi_Back.Services
         public async Task SendEmailAsync(string toEmail, string subject, string body)
         {
             var mail = "ZT.emre.72@gmail.com";
-
-            // Render Environment'tan oku
             var pw = Environment.GetEnvironmentVariable("GMAIL_APP_PASSWORD");
 
             if (string.IsNullOrEmpty(pw))
             {
-                Console.WriteLine("❌ HATA: GMAIL_APP_PASSWORD ortam değişkeni boş veya bulunamadı!");
-                throw new InvalidOperationException("GMAIL_APP_PASSWORD bulunamadı.");
+                throw new InvalidOperationException("GMAIL_APP_PASSWORD ortam değişkeni bulunamadı!");
             }
 
-            try
-            {
-                using (var client = new SmtpClient("smtp.gmail.com", 587))
-                {
-                    client.EnableSsl = true;
-                    client.UseDefaultCredentials = false;
-                    client.Credentials = new NetworkCredential(mail, pw.Trim());
+            // Boşlukları tamamen temizle
+            pw = pw.Replace(" ", "").Trim();
 
-                    using (var mailMessage = new MailMessage(from: mail, to: toEmail, subject, body))
-                    {
-                        mailMessage.IsBodyHtml = true;
-                        await client.SendMailAsync(mailMessage);
-                        Console.WriteLine($"✅ MAİL BAŞARIYLA GÖNDERİLDİ: {toEmail}");
-                    }
-                }
-            }
-            catch (Exception ex)
+            using (var client = new SmtpClient("smtp.gmail.com", 587))
             {
-                Console.WriteLine($"❌ SMTP MAİL GÖNDERME HATASI: {ex.Message}");
-                if (ex.InnerException != null)
+                client.EnableSsl = true;
+                client.UseDefaultCredentials = false;
+                client.Credentials = new NetworkCredential(mail, pw);
+                client.Timeout = 10000; // 10 saniye zaman aşımı ekle
+
+                using (var mailMessage = new MailMessage(from: mail, to: toEmail, subject, body))
                 {
-                    Console.WriteLine($"❌ DETAY: {ex.InnerException.Message}");
+                    mailMessage.IsBodyHtml = true;
+                    await client.SendMailAsync(mailMessage);
                 }
-                throw; // Hatanın yukarı fırlatılıp görülmesini sağla
             }
         }
     }
