@@ -73,7 +73,7 @@ namespace IzinSistemi_Back.Controllers
 
                 _cache.Set(cleanEmail, cacheData, TimeSpan.FromMinutes(5));
 
-                string subject = "Kurumsal İzin Sistemi - Doğrulama Kodunuz";
+                string subject = $"Kurumsal İzin Sistemi Doğrulama Kodunuz: {otpCode}";
                 string body = $@"
         <div style='font-family: Arial, sans-serif; text-align: center; padding: 20px;'>
             <h2>Hoş Geldiniz, {dto.Name}!</h2>
@@ -182,7 +182,7 @@ namespace IzinSistemi_Back.Controllers
 
                 _cache.Set($"Reset_{dto.Email}", otpCode, TimeSpan.FromMinutes(10));
 
-                string subject = "Şifre Sıfırlama Kodunuz";
+                string subject = $"Şifre Sıfırlama Kodunuz: {otpCode}";
                 string body = $@"
             <div style='font-family: Arial, sans-serif; text-align: center; padding: 20px;'>
                 <h2>Şifre Sıfırlama Talebi</h2>
