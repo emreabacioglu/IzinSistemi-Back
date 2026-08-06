@@ -1,9 +1,8 @@
 ﻿using System;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
-using MailKit.Net.Smtp;
-using MailKit.Security;
-using MimeKit;
-using MimeKit.Text;
 
 namespace IzinSistemi_Back.Services
 {
@@ -11,30 +10,38 @@ namespace IzinSistemi_Back.Services
     {
         public async Task SendEmailAsync(string toEmail, string subject, string body)
         {
-            var senderEmail = "ZT.emre.72@gmail.com";
-            var rawPw = Environment.GetEnvironmentVariable("GMAIL_APP_PASSWORD");
 
-            if (string.IsNullOrEmpty(rawPw))
+            var apiKey = Environment.GetEnvironmentVariable("BREVO_API_KEY");
+
+            if (string.IsNullOrEmpty(apiKey))
             {
-                throw new InvalidOperationException("GMAIL_APP_PASSWORD ortam değişkeni bulunamadı!");
+                throw new InvalidOperationException("BREVO_API_KEY ortam değişkeni bulunamadı!");
             }
 
-            var pw = rawPw.Replace(" ", "").Trim();
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("api-key", apiKey.Trim());
 
-            var email = new MimeMessage();
-            email.From.Add(MailboxAddress.Parse(senderEmail));
-            email.To.Add(MailboxAddress.Parse(toEmail));
-            email.Subject = subject;
-            email.Body = new TextPart(TextFormat.Html) { Text = body };
+            var payload = new
+            {
+                sender = new { name = "Kurumsal İzin Sistemi", email = "ZT.emre.72@gmail.com" },
+                to = new[] { new { email = toEmail } },
+                subject = subject,
+                htmlContent = body
+            };
 
-            using var smtp = new SmtpClient();
+            var jsonPayload = JsonSerializer.Serialize(payload);
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-            smtp.Timeout = 10000;
+            var response = await client.PostAsync("https://api.brevo.com/v3/smtp/email", content);
 
-            await smtp.ConnectAsync("smtp.gmail.com", 587, SecureSocketOptions.StartTls);
-            await smtp.AuthenticateAsync(senderEmail, pw);
-            await smtp.SendAsync(email);
-            await smtp.DisconnectAsync(true);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorDetails = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"❌ API Mail Hatası: {errorDetails}");
+                throw new Exception($"E-posta API üzerinden gönderilemedi: {response.StatusCode}");
+            }
+
+            Console.WriteLine($"✅ API MAİLİ BAŞARIYLA GÖNDERİLDİ: {toEmail}");
         }
     }
 }
