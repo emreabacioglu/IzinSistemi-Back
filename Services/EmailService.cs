@@ -1,4 +1,6 @@
-﻿using MailKit.Net.Smtp;
+﻿using System;
+using System.Threading.Tasks;
+using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
 using MimeKit.Text;
@@ -27,19 +29,12 @@ namespace IzinSistemi_Back.Services
 
             using var smtp = new SmtpClient();
 
-            try
-            {
-                await smtp.ConnectAsync("smtp.gmail.com", 465, SecureSocketOptions.SslOnConnect);
+            smtp.Timeout = 10000;
 
-                await smtp.AuthenticateAsync(senderEmail, pw);
-                await smtp.SendAsync(email);
-                await smtp.DisconnectAsync(true);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ MailKit 465 Port Hatası: {ex.Message}");
-                throw;
-            }
+            await smtp.ConnectAsync("smtp.gmail.com", 587, SecureSocketOptions.StartTls);
+            await smtp.AuthenticateAsync(senderEmail, pw);
+            await smtp.SendAsync(email);
+            await smtp.DisconnectAsync(true);
         }
     }
 }

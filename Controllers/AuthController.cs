@@ -25,55 +25,73 @@ namespace IzinSistemi_Back.Controllers
         }
 
         [HttpPost("Register")]
-        public async Task<IActionResult> Register(RegisterDto dto)
+        public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
-            var existingUser = await _context.Employees.FirstOrDefaultAsync(e => e.Email == dto.Email);
-            if (existingUser != null)
+            try
             {
-                return BadRequest(new { message = "Bu e-posta adresi ile zaten bir kayıt mevcut. Lütfen giriş yapın." });
-            }
-
-            string spamKey = $"SpamCheck_{dto.Email}";
-
-            if (_cache.TryGetValue(spamKey, out int requestCount))
-            {
-                if (requestCount >= 3)
+                if (dto == null || string.IsNullOrWhiteSpace(dto.Email))
                 {
-                    return BadRequest(new { message = "Maksimum kod isteme sınırına ulaştınız. Lütfen 10 dakika bekleyin." });
+                    return BadRequest(new { message = "E-posta adresi boş olamaz." });
                 }
-                _cache.Set(spamKey, requestCount + 1, TimeSpan.FromMinutes(10));
-            }
-            else
-            {
-                _cache.Set(spamKey, 1, TimeSpan.FromMinutes(10));
-            }
 
-            Random rnd = new Random();
-            string otpCode = rnd.Next(100000, 999999).ToString();
+                string cleanEmail = dto.Email.Trim().ToLower();
 
-            var cacheData = new UserRegistrationCacheData { UserInfo = dto, OtpCode = otpCode };
-            _cache.Set(dto.Email, cacheData, TimeSpan.FromMinutes(5));
+                var existingUser = await _context.Employees.FirstOrDefaultAsync(e => e.Email.ToLower() == cleanEmail);
+                if (existingUser != null)
+                {
+                    return BadRequest(new { message = "Bu e-posta adresi ile zaten bir kayıt mevcut. Lütfen giriş yapın." });
+                }
 
-            string subject = "Kurumsal İzin Sistemi - Doğrulama Kodunuz";
-            string body = $@"
+                string spamKey = $"SpamCheck_{cleanEmail}";
+                if (_cache.TryGetValue(spamKey, out int requestCount))
+                {
+                    if (requestCount >= 5)
+                    {
+                        return BadRequest(new { message = "Çok fazla kod istediniz. Lütfen 10 dakika bekleyin." });
+                    }
+                    _cache.Set(spamKey, requestCount + 1, TimeSpan.FromMinutes(10));
+                }
+                else
+                {
+                    _cache.Set(spamKey, 1, TimeSpan.FromMinutes(10));
+                }
+
+                Random rnd = new Random();
+                string otpCode = rnd.Next(100000, 999999).ToString();
+
+                var cacheData = new UserRegistrationCacheData
+                {
+                    UserInfo = new RegisterDto
+                    {
+                        Name = dto.Name,
+                        Surname = dto.Surname,
+                        Email = cleanEmail,
+                        Password = dto.Password
+                    },
+                    OtpCode = otpCode
+                };
+
+                _cache.Set(cleanEmail, cacheData, TimeSpan.FromMinutes(5));
+
+                string subject = "Kurumsal İzin Sistemi - Doğrulama Kodunuz";
+                string body = $@"
         <div style='font-family: Arial, sans-serif; text-align: center; padding: 20px;'>
             <h2>Hoş Geldiniz, {dto.Name}!</h2>
             <p>Kayıt işleminizi tamamlamak için doğrulama kodunuz aşağıdadır (5 dakika geçerlidir):</p>
             <h1 style='color: #E10514; background: #f8f9fa; padding: 15px; border-radius: 8px; display: inline-block;'>
                 {otpCode}
             </h1>
-            <p style='font-size: 11px; color: #6c757d;'>Not: Güvenlik gereği çok fazla yeni kod isterseniz sisteminiz geçici olarak kilitlenir.</p>
         </div>";
 
-            try
-            {
-                await _emailService.SendEmailAsync(dto.Email, subject, body);
+                await _emailService.SendEmailAsync(cleanEmail, subject, body);
+
                 return Ok(new { message = "Doğrulama kodu e-posta adresinize gönderildi." });
             }
             catch (Exception ex)
             {
-                // Mail patlarsa 400 değil, açıkça 500 hatası ve detayını dönelim
-                return StatusCode(500, new { message = "E-posta gönderilirken bir hata oluştu: " + ex.Message });
+
+                string errorDetails = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+                return StatusCode(500, new { message = "Kayıt hatası: " + errorDetails });
             }
         }
 
