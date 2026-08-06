@@ -39,7 +39,7 @@ namespace IzinSistemi_Back.Controllers
             {
                 if (requestCount >= 3)
                 {
-                    return BadRequest("Maksimum kod isteme sınırına ulaştınız. Lütfen 10 dakika bekleyin.");
+                    return BadRequest(new { message = "Maksimum kod isteme sınırına ulaştınız. Lütfen 10 dakika bekleyin." });
                 }
                 _cache.Set(spamKey, requestCount + 1, TimeSpan.FromMinutes(10));
             }
@@ -65,9 +65,16 @@ namespace IzinSistemi_Back.Controllers
             <p style='font-size: 11px; color: #6c757d;'>Not: Güvenlik gereği çok fazla yeni kod isterseniz sisteminiz geçici olarak kilitlenir.</p>
         </div>";
 
-            await _emailService.SendEmailAsync(dto.Email, subject, body);
-
-            return Ok(new { message = "Doğrulama kodu e-posta adresinize gönderildi." });
+            try
+            {
+                await _emailService.SendEmailAsync(dto.Email, subject, body);
+                return Ok(new { message = "Doğrulama kodu e-posta adresinize gönderildi." });
+            }
+            catch (Exception ex)
+            {
+                // Mail patlarsa 400 değil, açıkça 500 hatası ve detayını dönelim
+                return StatusCode(500, new { message = "E-posta gönderilirken bir hata oluştu: " + ex.Message });
+            }
         }
 
         [HttpPost("VerifyOtp")]
