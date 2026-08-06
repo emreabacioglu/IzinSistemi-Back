@@ -17,7 +17,7 @@ builder.Services.AddCors(options =>
 
 // --- 2. VERİTABANI & DİĞER SERVİSLER ---
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
