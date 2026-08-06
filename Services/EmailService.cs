@@ -23,7 +23,7 @@ namespace IzinSistemi_Back.Services
 
             var payload = new
             {
-                sender = new { name = "Kurumsal İzin Sistemi", email = "ZT.emre.72@gmail.com" },
+                sender = new { name = "Kurumsal İzin Sistemi", email = "zt.emre.72@gmail.com" },
                 to = new[] { new { email = toEmail } },
                 subject = subject,
                 htmlContent = body
