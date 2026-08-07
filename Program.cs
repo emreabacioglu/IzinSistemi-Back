@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 // --- 1. CORS SERVİSİ (Hem Local hem de Vercel/Canlı Ortam İçin Tüm İsteklere İzin Verir) ---
 builder.Services.AddCors(options =>
 {
