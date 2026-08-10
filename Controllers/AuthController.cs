@@ -98,10 +98,10 @@ namespace IzinSistemi_Back.Controllers
         [HttpPost("VerifyOtp")]
         public async Task<IActionResult> VerifyOtp(VerifyOtpDto dto)
         {
-            
+
             if (_cache.TryGetValue(dto.Email, out UserRegistrationCacheData savedData))
             {
-                
+
                 if (savedData.OtpCode == dto.OtpCode)
                 {
                     var newEmployee = new Employee
@@ -137,7 +137,7 @@ namespace IzinSistemi_Back.Controllers
 
             employee.Department = dto.Department;
             employee.Title = dto.Title;
-            
+
             if (dto.TotalLeaveDays.HasValue)
             {
                 employee.TotalLeaveDays = dto.TotalLeaveDays.Value;
@@ -206,12 +206,12 @@ namespace IzinSistemi_Back.Controllers
         [HttpPost("ResetPassword")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
         {
-            
+
             if (_cache.TryGetValue($"Reset_{dto.Email}", out string savedCode) && savedCode == dto.OtpCode)
             {
                 var user = await _context.Employees.FirstOrDefaultAsync(e => e.Email == dto.Email);
                 if (user == null) return BadRequest("Kullanıcı bulunamadı.");
-                
+
                 user.Password = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
                 await _context.SaveChangesAsync();
 
@@ -222,7 +222,27 @@ namespace IzinSistemi_Back.Controllers
 
             return BadRequest(new { message = "Hatalı veya süresi dolmuş kod girdiniz." });
         }
+
+
+        [HttpGet("VerifySession/{id}")]
+        public async Task<IActionResult> VerifySession(int id)
+        {
+            var user = await _context.Employees.FindAsync(id);
+
+            if (user == null)
+            {
+                return NotFound(new { message = "Kullanıcı hesabı bulunamadı veya silinmiş." });
+            }
+
+            return Ok(new
+            {
+                id = user.Id,
+                isAdmin = user.IsAdmin,
+                department = user.Department
+            });
+        }
     }
+
 
         public class RegisterDto
     {
