@@ -89,21 +89,32 @@ namespace IzinSistemi_Back.Controllers
             }
             catch (Exception ex)
             {
-
                 string errorDetails = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
                 return StatusCode(500, new { message = "Kayıt hatası: " + errorDetails });
             }
         }
 
         [HttpPost("VerifyOtp")]
-        public async Task<IActionResult> VerifyOtp(VerifyOtpDto dto)
+        public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpDto dto)
         {
-
-            if (_cache.TryGetValue(dto.Email, out UserRegistrationCacheData savedData))
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Email))
             {
+                return BadRequest("Geçersiz istek.");
+            }
 
+            string cleanEmail = dto.Email.Trim().ToLower();
+
+            if (_cache.TryGetValue(cleanEmail, out UserRegistrationCacheData savedData))
+            {
                 if (savedData.OtpCode == dto.OtpCode)
                 {
+                    var alreadyExists = await _context.Employees.AnyAsync(e => e.Email.ToLower() == cleanEmail);
+                    if (alreadyExists)
+                    {
+                        _cache.Remove(cleanEmail);
+                        return BadRequest("Bu e-posta adresi zaten doğrulanmış ve kaydedilmiş.");
+                    }
+
                     var newEmployee = new Employee
                     {
                         Name = savedData.UserInfo.Name,
@@ -117,7 +128,7 @@ namespace IzinSistemi_Back.Controllers
                     _context.Employees.Add(newEmployee);
                     await _context.SaveChangesAsync();
 
-                    _cache.Remove(dto.Email);
+                    _cache.Remove(cleanEmail);
 
                     return Ok(new { message = "Doğrulama başarılı. Sisteme giriş yapılıyor..." });
                 }
@@ -171,7 +182,14 @@ namespace IzinSistemi_Back.Controllers
         {
             try
             {
-                var user = await _context.Employees.FirstOrDefaultAsync(e => e.Email == dto.Email);
+                if (dto == null || string.IsNullOrWhiteSpace(dto.Email))
+                {
+                    return BadRequest(new { message = "E-posta adresi boş olamaz." });
+                }
+
+                string cleanEmail = dto.Email.Trim().ToLower();
+
+                var user = await _context.Employees.FirstOrDefaultAsync(e => e.Email.ToLower() == cleanEmail);
                 if (user == null)
                 {
                     return Ok(new { message = "Eğer sistemde kayıtlı bir e-posta adresi girdiyseniz, şifre sıfırlama kodu gönderilmiştir." });
@@ -180,7 +198,7 @@ namespace IzinSistemi_Back.Controllers
                 Random rnd = new Random();
                 string otpCode = rnd.Next(100000, 999999).ToString();
 
-                _cache.Set($"Reset_{dto.Email}", otpCode, TimeSpan.FromMinutes(10));
+                _cache.Set($"Reset_{cleanEmail}", otpCode, TimeSpan.FromMinutes(10));
 
                 string subject = $"Şifre Sıfırlama Kodunuz: {otpCode}";
                 string body = $@"
@@ -193,7 +211,7 @@ namespace IzinSistemi_Back.Controllers
                 <p style='font-size: 11px; color: #6c757d;'>Bu işlemi siz talep etmediyseniz, lütfen bu e-postayı dikkate almayın.</p>
             </div>";
 
-                await _emailService.SendEmailAsync(dto.Email, subject, body);
+                await _emailService.SendEmailAsync(cleanEmail, subject, body);
 
                 return Ok(new { message = "Eğer sistemde kayıtlı bir e-posta adresi girdiyseniz, şifre sıfırlama kodu gönderilmiştir." });
             }
@@ -206,23 +224,28 @@ namespace IzinSistemi_Back.Controllers
         [HttpPost("ResetPassword")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
         {
-
-            if (_cache.TryGetValue($"Reset_{dto.Email}", out string savedCode) && savedCode == dto.OtpCode)
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Email))
             {
-                var user = await _context.Employees.FirstOrDefaultAsync(e => e.Email == dto.Email);
+                return BadRequest("Geçersiz istek.");
+            }
+
+            string cleanEmail = dto.Email.Trim().ToLower();
+
+            if (_cache.TryGetValue($"Reset_{cleanEmail}", out string savedCode) && savedCode == dto.OtpCode)
+            {
+                var user = await _context.Employees.FirstOrDefaultAsync(e => e.Email.ToLower() == cleanEmail);
                 if (user == null) return BadRequest("Kullanıcı bulunamadı.");
 
                 user.Password = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
                 await _context.SaveChangesAsync();
 
-                _cache.Remove($"Reset_{dto.Email}");
+                _cache.Remove($"Reset_{cleanEmail}");
 
                 return Ok(new { message = "Şifreniz başarıyla değiştirildi. Yeni şifrenizle giriş yapabilirsiniz." });
             }
 
             return BadRequest(new { message = "Hatalı veya süresi dolmuş kod girdiniz." });
         }
-
 
         [HttpGet("VerifySession/{id}")]
         public async Task<IActionResult> VerifySession(int id)
@@ -237,14 +260,17 @@ namespace IzinSistemi_Back.Controllers
             return Ok(new
             {
                 id = user.Id,
+                name = user.Name,
+                surname = user.Surname,
+                email = user.Email,
                 isAdmin = user.IsAdmin,
-                department = user.Department
+                department = user.Department,
+                title = user.Title
             });
         }
     }
 
-
-        public class RegisterDto
+    public class RegisterDto
     {
         public string Name { get; set; }
         public string Surname { get; set; }

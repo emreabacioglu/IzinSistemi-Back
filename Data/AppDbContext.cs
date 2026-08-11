@@ -8,10 +8,17 @@ namespace IzinSistemi_Back.Data
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
         }
+
         public DbSet<Employee> Employees { get; set; }
-        public DbSet<Leave> Leaves
+        public DbSet<Leave> Leaves { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            get; set;
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<Employee>()
+                .HasIndex(e => e.Email)
+                .IsUnique();
         }
     }
 }
