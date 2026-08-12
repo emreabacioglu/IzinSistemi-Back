@@ -140,6 +140,7 @@ namespace IzinSistemi_Back.Controllers
                         isAdmin = newEmployee.IsAdmin,
                         department = newEmployee.Department,
                         title = newEmployee.Title,
+                        totalLeaveDays = newEmployee.TotalLeaveDays,
                         message = "Doğrulama başarılı. Sisteme giriş yapılıyor..."
                     });
                 }
