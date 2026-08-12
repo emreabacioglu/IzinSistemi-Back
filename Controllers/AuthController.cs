@@ -126,11 +126,22 @@ namespace IzinSistemi_Back.Controllers
                     };
 
                     _context.Employees.Add(newEmployee);
+
                     await _context.SaveChangesAsync();
 
                     _cache.Remove(cleanEmail);
 
-                    return Ok(new { message = "Doğrulama başarılı. Sisteme giriş yapılıyor..." });
+                    return Ok(new
+                    {
+                        id = newEmployee.Id,
+                        name = newEmployee.Name,
+                        surname = newEmployee.Surname,
+                        email = newEmployee.Email,
+                        isAdmin = newEmployee.IsAdmin,
+                        department = newEmployee.Department,
+                        title = newEmployee.Title,
+                        message = "Doğrulama başarılı. Sisteme giriş yapılıyor..."
+                    });
                 }
             }
 
