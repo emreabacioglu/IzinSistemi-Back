@@ -33,6 +33,8 @@ namespace IzinSistemi_Back.Controllers
                     e.Department,
                     e.Title,
                     e.TotalLeaveDays,
+                    e.BirthDay,
+                    e.LeaveReset,
 
                     Leaves = e.Leaves.Select(l => new
                     {

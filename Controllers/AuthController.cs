@@ -277,7 +277,9 @@ namespace IzinSistemi_Back.Controllers
                 email = user.Email,
                 isAdmin = user.IsAdmin,
                 department = user.Department,
-                title = user.Title
+                title = user.Title,
+                birthDay = user.BirthDay,
+                leaveReset = user.LeaveReset,
             });
         }
     }
