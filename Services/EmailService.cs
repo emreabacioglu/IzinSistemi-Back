@@ -18,12 +18,20 @@ namespace IzinSistemi_Back.Services
                 throw new InvalidOperationException("BREVO_API_KEY ortam değişkeni bulunamadı!");
             }
 
+            var senderEmail = Environment.GetEnvironmentVariable("SENDER_EMAIL");
+
+            if (string.IsNullOrEmpty(senderEmail))
+            {
+                throw new InvalidOperationException("SENDER_EMAIL ortam değişkeni bulunamadı!");
+            }
+
+
             using var client = new HttpClient();
             client.DefaultRequestHeaders.Add("api-key", apiKey.Trim());
 
             var payload = new
             {
-                sender = new { name = "Kurumsal İzin Sistemi", email = "zt.emre.72@gmail.com" },
+                sender = new { name = "Kurumsal İzin Sistemi", email = senderEmail },
                 to = new[] { new { email = toEmail } },
                 subject = subject,
                 htmlContent = body

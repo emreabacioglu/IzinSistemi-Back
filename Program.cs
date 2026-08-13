@@ -18,8 +18,11 @@ builder.Services.AddCors(options =>
 });
 
 // --- 2. VERİTABANI & DİĞER SERVİSLER ---
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString(connectionString)));
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
